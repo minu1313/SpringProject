@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//ibatis.apache.org//DTD Mapper 3.0//EN" 
+						"http://ibatis.apache.org/dtd/ibatis-3-mapper.dtd">
+<mapper namespace="kr.co.green.contact.model.mapper.ContactMapper">
+
+	<resultMap id="contactResultMap" type="kr.co.green.contact.model.dto.WriterInfoDTO">
+		<result property="writerNo" column="no"></result>
+		<result property="writerName" column="name"></result>
+		<result property="writerEmail" column="email"></result>
+		
+		<association property="contactAskDTO" javaType="kr.co.green.contact.model.dto.ContactAskDTO">
+			<result property="askNo" column="no"></result>
+			<result property="ask" column="ask"></result>
+			<result property="askDate" column="ask_date"></result>
+			<result property="contactAskNo" column="contact_ask_no"></result>
+		</association>		
+	</resultMap>
+	
+	
+	<insert id="contactEnroll">
+		<selectKey keyProperty = "writerNo" resultType ="int" order = "BEFORE">
+			SELECT writer_info_seq.nextval FROM dual
+		</selectKey>
+		INSERT INTO writer_info
+		VALUES(#{writerNo},
+			   #{writerName},
+			   #{writerEmail})
+	</insert>
+	
+	<insert id="contactAskEnroll">	
+		INSERT INTO contact_ask
+		VALUES(contact_ask_seq.nextval,
+			   #{contactAskDTO.ask},
+			   default,
+			   #{writerNo})
+	</insert>
+	
+	<select id="contactListForm" resultMap="contactResultMap">
+				SELECT * FROM 
+							(SELECT 
+								ca.no,
+								wi.name,
+								wi.email,
+								ca.ask_date,
+								ROW_NUMBER() OVER(
+								ORDER BY ask_date DESC) AS rn
+								FROM 
+									contact_ask ca
+								JOIN 
+									writer_info wi
+								ON wi.no = ca.contact_ask_no
+							
+							<choose>
+								<when test="searchDTO.category.equals('email')">
+									WHERE email LIKE '%' || #{searchDTO.searchText} || '%'
+								</when>
+								<when test="searchDTO.category.equals('name')">
+									WHERE name LIKE '%' || #{searchDTO.searchText} || '%'
+								</when>
+							</choose>
+							)
+								WHERE rn between ${pi.offset} AND ${pi.limit}
+	</select>
+	
+	<select id="getContactCount">
+		SELECT COUNT(*) FROM contact_ask ca
+		
+		<choose>
+			<when test="searchDTO.category.equals('email')">
+				WHERE title LIKE '%' || #{searchDTO.searchText} || '%'
+			</when>
+			<when test="searchDTO.category.equals('name')">
+				WHERE content LIKE '%' || #{searchDTO.searchText} || '%'
+			</when>
+			
+		</choose>
+	</select>
+	
+	<select id="contactDetail" resultMap="contactResultMap">
+		SELECT wi.name,
+			   wi.email,
+			   ca.ask_date,
+			   ca.ask
+	    FROM contact_ask ca
+	    JOIN writer_info wi ON wi.no = ca.contact_ask_no
+	    WHERE wi.no = #{contactAskNo}
+	</select>
+	
+	
+		
+</mapper>
+	
+	
+	
+	
+	
+	
+	
